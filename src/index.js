@@ -3,6 +3,9 @@ const datastore = require(`${__dirname}/datastore`);
 const express = require('express');
 const app = express();
 
+app.disable('x-powered-by');
+app.set('etag', false);
+
 app.use('/', express.static(`${__dirname}/../public`));
 
 app.get('/api/full', function (req, res) {
