@@ -1,0 +1,23 @@
+{
+    "Merchants": {
+        "count": 3,
+        "list": {
+            "Merchant1": {
+                "id": "Merchant1",
+                "title": "My Merchant 1"
+            },
+            "Merchant2": {
+                "id": "Merchant2",
+                "title": "My Merchant 2"
+            },
+            "Merchant3": {
+                "id": "Merchant3",
+                "title": "My Merchant 3"
+            },
+            "Merchant5": {
+                "id": "Merchant5",
+                "title": "My Merchant 5"
+            }
+        }
+    }
+}
