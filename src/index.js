@@ -15,7 +15,7 @@ app.get('/api/merc/:id', function (req, res) {
     if (req.params.id && datastore.full.Merchants.list[req.params.id]) {
         res.json(datastore.full.Merchants.list[req.params.id]);
     } else {
-        res.status(404).send('Not found.');
+        res.status(404).json({"error": "Not found."});
     }
 });
 app.listen(3088, 'localhost', function () {
