@@ -20,7 +20,7 @@ WATCHED_FILES.forEach((fileName) => {
         });
     };
     fs.watch(`${FILES_PREFIX}${fileName}.json`, (eventType, filename) => {
-        if (eventType === 'rename') {
+        if (eventType === 'change') {
             handler(fileName);
         }
     });

@@ -15,7 +15,8 @@ if (!fs.existsSync(dataDir)){
 }
 [ agentsFile, historyFile, timeStampFile ].forEach( (file) => {
     if (!fs.existsSync(file)){
-        fs.createWriteStream(file);
+        let data = file.endsWith("timestamp.json") ? "" : {};
+        fs.writeFile(file, JSON.stringify(data));
     }   
 });
 
