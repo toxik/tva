@@ -1,13 +1,23 @@
-const datastore = require(`${__dirname}/datastore`);
 const StringDecoder = require('string_decoder').StringDecoder;
 const spawn = require('child_process').spawn;
 const decoder = new StringDecoder('latin1');
 const fs = require('fs');
 const http = require('http');
-const agentsFile = `${__dirname}/../data/agents.json`;
-const historyFile = `${__dirname}/../data/history.json`;
-const timeStampFile = `${__dirname}/../data/timestamp.json`;
+const dataDir = `${__dirname}/../data`;
+const agentsFile = `${dataDir}/agents.json`;
+const historyFile = `${dataDir}/history.json`;
+const timeStampFile = `${dataDir}/timestamp.json`;
 let updateCheckTimer = null;
+
+// create files and directoy if they don't exist
+if (!fs.existsSync(dataDir)){
+    fs.mkdirSync(dataDir);
+}
+[ agentsFile, historyFile, timeStampFile ].forEach( (file) => {
+    if (!fs.existsSync(file)){
+        fs.createWriteStream(file);
+    }   
+});
 
 let update = (date) => {
     clearTimeout(updateCheckTimer);
@@ -83,7 +93,11 @@ let getFullDate = () => {
 let updateCheck = () => {
     fs.readFile(timeStampFile, 'ascii', (err, data) => {
         console.log('check if update is needed');
-        if (getFullDate() > JSON.parse(data)) {
+        let fileDate = "";
+        try {
+            fileDate = JSON.parse(data);
+        } catch (e) { }
+        if (getFullDate() > fileDate) {
             console.log('attempt update to', getFullDate());
             update(getFullDate());
         } else {
