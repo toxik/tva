@@ -1,32 +1,29 @@
 const fs = require('fs');
 const datastore = require(`${__dirname}/datastore`); 
 
-const handleFull = (data) => {
-    datastore.full = data;
-};
-const handleDelta = (data) => {
-    datastore.delta = data;
-};
-
 const FILES_PREFIX = `${__dirname}/../data/`;
-const WATCHED_FILES = [
-    {"name": "full.json", "handler": handleFull},
-    {"name": "delta.json", "handler": handleDelta},
-];
-WATCHED_FILES.forEach(function(file){
+const WATCHED_FILES = [ 'agents', 'history' ];
+WATCHED_FILES.forEach((fileName) => {
     let handler = (file) => {
-        fs.readFile(`${FILES_PREFIX}${file.name}`, 'utf8', function (err, data) {
+        fs.readFile(`${FILES_PREFIX}${file}.json`, 'utf8', function (err, data) {
             if (err) {
                 console.log('ERROR WHILE READING ', err);
                 return;
             }
-            file.handler(JSON.parse(data));
+            try {
+                datastore[file] = JSON.parse(data);
+                console.log('updated ', file);
+            } catch (e) {
+                console.error(file, data);
+            }
+            
         });
     };
-    fs.watch(`${FILES_PREFIX}${file.name}`, (eventType, filename) => {
-        console.log(eventType, filename);
-        handler(file);
+    fs.watch(`${FILES_PREFIX}${fileName}.json`, (eventType, filename) => {
+        if (eventType === 'rename') {
+            handler(fileName);
+        }
     });
-    handler(file);
+    handler(fileName);
 });
 
