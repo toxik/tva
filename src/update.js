@@ -1,6 +1,7 @@
 const StringDecoder = require('string_decoder').StringDecoder;
 const spawn = require('child_process').spawn;
 const decoder = new StringDecoder('latin1');
+const readline = require('readline');
 const fs = require('fs');
 const http = require('http');
 const dataDir = `${__dirname}/../data`;
@@ -8,6 +9,14 @@ const agentsFile = `${dataDir}/agents.json`;
 const historyFile = `${dataDir}/history.json`;
 const timeStampFile = `${dataDir}/timestamp.json`;
 let updateCheckTimer = null;
+
+let MongoClient = require('mongodb').MongoClient;
+const url = 'mongodb://localhost:27017/tva';
+let db = null;
+MongoClient.connect(url, function (err, dbHandle) {
+    if (err) { throw err; }
+    db = dbHandle;
+});
 
 // create files and directoy if they don't exist
 if (!fs.existsSync(dataDir)){
@@ -31,53 +40,57 @@ let update = (date) => {
         }
         let download = fs.createWriteStream(fileName);
         res.pipe(download);
-        res.on('end', () => {
-            let agentsStr = '';
-            let unzipAgents = spawn('unzip', ['-p', fileName, 'agenti.txt']);
-            unzipAgents.stdout.on('data', (data) => {
-                agentsStr += decoder.write(data);
-            });
-            unzipAgents.on('close', () => {
-                let agents = {};
-                let history = {};
-                agentsStr.split('\n').forEach(agent => {
-                    let [ cui, name ] = agent.split('#');
-                    if (!cui) return; 
-                    agents[cui] =  { cui, name };
-                    history[cui] = [];
-                });
-                fs.writeFile(agentsFile, JSON.stringify(agents));
 
-                let historyStr = '';
-                let unzipHistory = spawn('unzip', ['-p', fileName, 'istoric.txt']);
-                unzipHistory.stdout.on('data', (data) => {
-                    historyStr += decoder.write(data);
+        res.on('end', () => {
+            // mongo init
+            let agents = db.collection('agents');
+            agents.createIndex({ "cui": 1 });
+            agents.createIndex({ "cui.history.update": -1 });
+
+            let unzipAgents = spawn('unzip', ['-p', fileName, 'agenti.txt']);
+            let agentsReader = readline.createInterface({
+                input: unzipAgents.stdout
+            });
+
+            agentsReader.on('line', (line) => {
+                let row = decoder.write(line);
+                let [ cui, name ] = row.split('#');
+                if (!cui) return; 
+                let agent = { $set: {cui, name} };
+                agents.update({"cui": cui}, agent, { upsert: true }, (err, result) => {
+                    if (err) throw err;
                 });
-                unzipHistory.on('close', (data) => {
-                    historyArr = historyStr.split("\n");
-                    historyArr.forEach( (data) => {
-                        data = data.split('#');
-                        let cui = data[1];
-                        if (!cui) return;
-                        let update = data[5];
-                        let start = data[2]; 
-                        let end = data[3];
-                        try {
-                            history[cui].push({
-                                cui, update, start, end
-                            });
-                        } catch (e) {
-                            console.error(e, cui, history[cui]);
-                            throw e;
-                        }
+            });
+
+            unzipAgents.on('close', () => {
+                console.log('updated the agents list to', date);
+                let unzipHistory = spawn('unzip', ['-p', fileName, 'istoric.txt']);
+                let historyReader = readline.createInterface({
+                    input: unzipHistory.stdout
+                });
+                historyReader.on('line', (line) => {
+                    data = decoder.write(line).split('#');
+                    let history = {};
+                    let cui = data[1];
+                    if (!cui) return;
+                    history = {
+                        update: data[5],
+                        start: data[2],
+                        end: data[3],
+                        type: data[6]
+                    };
+
+                    agents.update({"cui": cui}, { $addToSet: { 'history': history } }, (err, result) => {
+                        if (err) throw err;
                     });
-                    fs.writeFile(historyFile, JSON.stringify(history));
+                });
+                unzipHistory.on('close', () => {
+                    console.log('updated the history to', date);
                     fs.writeFile(timeStampFile, JSON.stringify(date));
                     fs.unlink(fileName);
-                    console.log("updated to", date);
                     setTimeout(updateCheck, 15 * 1e3);
                 });
-            });     
+            });
         });
     });
 
