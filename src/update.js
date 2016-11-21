@@ -11,7 +11,7 @@ const timeStampFile = `${dataDir}/timestamp.json`;
 let updateCheckTimer = null;
 
 let MongoClient = require('mongodb').MongoClient;
-const url = 'mongodb://localhost:27017/tva';
+const url = 'mongodb://m.navigheaza.ro:27017/tva';
 let db = null;
 MongoClient.connect(url, function (err, dbHandle) {
     if (err) { throw err; }
